@@ -1,4 +1,4 @@
-name = "openmedia-api"
+name = "mediasaver-api"
 main = "src/index.js"
 compatibility_date = "2026-11-19"
 
