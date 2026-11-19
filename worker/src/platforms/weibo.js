@@ -1,4 +1,3 @@
-const API_BASE = "https://m.weibo.cn/statuses/show";
 
 const ALLOWED_MEDIA_HOSTS = [
   "sinaimg.cn",
@@ -7,24 +6,26 @@ const ALLOWED_MEDIA_HOSTS = [
   "video.weibo.com"
 ];
 
-function isAllowedMediaUrl(value) {
+function jsonSafeUrl(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+
   try {
     const url = new URL(value);
-    return (
-      url.protocol === "https:" &&
-      ALLOWED_MEDIA_HOSTS.some(host =>
-        url.hostname === host || url.hostname.endsWith("." + host)
-      )
-    );
-  } catch {
-    return false;
-  }
-}
 
-function safeUrl(value) {
-  return typeof value === "string" && isAllowedMediaUrl(value)
-    ? value
-    : null;
+    if (!["https:", "http:"].includes(url.protocol)) return null;
+
+    const allowed = ALLOWED_MEDIA_HOSTS.some(host =>
+      url.hostname === host || url.hostname.endsWith("." + host)
+    );
+
+    if (!allowed) return null;
+
+    // Upgrade approved media hosts to HTTPS.
+    url.protocol = "https:";
+    return url.href;
+  } catch {
+    return null;
+  }
 }
 
 function getVideoUrl(mediaInfo) {
@@ -34,63 +35,139 @@ function getVideoUrl(mediaInfo) {
     mediaInfo.stream_url_hd,
     mediaInfo.mp4_720p_mp4,
     mediaInfo.mp4_hd_url,
+    mediaInfo.hd_url,
     mediaInfo.stream_url,
     mediaInfo.mp4_sd_url
   ];
 
-  return candidates.map(safeUrl).find(Boolean) || null;
+  return candidates.map(jsonSafeUrl).find(Boolean) || null;
 }
 
 function extractMedia(post) {
   const media = [];
 
-  // Extract attached photos and Live Photos.
   for (const pic of post.pics || []) {
-    const imageUrl = safeUrl(
+    const image = jsonSafeUrl(
       pic.large?.url || pic.original?.url || pic.url
     );
 
-    const livePhotoUrl = safeUrl(pic.videoSrc);
+    const livePhoto = jsonSafeUrl(pic.videoSrc);
 
-    if (livePhotoUrl) {
+    if (livePhoto) {
       media.push({
         type: "livephoto",
-        image: imageUrl,
-        video: livePhotoUrl
+        image,
+        video: livePhoto
       });
-    } else if (imageUrl) {
+    } else if (image) {
       media.push({
         type: "image",
-        url: imageUrl
+        url: image
       });
     }
   }
 
-  // Extract an attached video, if present.
   const pageInfo = post.page_info;
-  const mediaInfo = pageInfo?.media_info;
+  const video = getVideoUrl(pageInfo?.media_info);
 
-  const videoUrl = getVideoUrl(mediaInfo);
-
-  if (videoUrl) {
+  if (video) {
     media.push({
       type: "video",
-      url: videoUrl,
-      thumbnail: safeUrl(
+      url: video,
+      thumbnail: jsonSafeUrl(
         pageInfo?.page_pic ||
-        mediaInfo?.big_pic_info?.pic_big?.url
+        pageInfo?.media_info?.big_pic_info?.pic_big?.url
       ),
-      duration: mediaInfo?.duration || null,
-      quality: "best available"
+      duration: pageInfo?.media_info?.duration || null
     });
   }
 
   return media;
 }
 
-export async function parseWeibo(postUrl) {
-  const url = new URL(postUrl);
+async function parseVideoComponent(url) {
+  const fid = url.searchParams.get("fid");
 
+  if (!fid || !/^1034:\d{6,20}$/.test(fid)) {
+    throw new Error("Invalid Weibo video ID.");
+  }
+
+  const apiUrl =
+    "https://weibo.com/tv/api/component?page=" +
+    encodeURIComponent(`/tv/show/${fid}`);
+
+  const payload = new URLSearchParams({
+    data: JSON.stringify({
+      Component_Play_Playinfo: {
+        oid: fid
+      }
+    })
+  });
+
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+      "Referer": `https://weibo.com/tv/show/${fid}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Accept": "application/json, text/plain, */*"
+    },
+    body: payload.toString(),
+    redirect: "error"
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Weibo video API returned HTTP ${response.status}.`
+    );
+  }
+
+  const result = await response.json();
+
+  const playInfo =
+    result?.data?.Component_Play_Playinfo;
+
+  if (!playInfo) {
+    throw new Error(
+      "Weibo did not return video information. The video may require access or be unavailable."
+    );
+  }
+
+  const urls = playInfo.urls || {};
+
+  const candidates = Object.values(urls)
+    .map(jsonSafeUrl)
+    .filter(Boolean);
+
+  const uniqueUrls = [...new Set(candidates)];
+
+  if (!uniqueUrls.length) {
+    throw new Error(
+      "No accessible video streams were returned by Weibo."
+    );
+  }
+
+  return {
+    success: true,
+    platform: "Weibo",
+    id: fid,
+    author:
+      playInfo.author ||
+      playInfo.author_name ||
+      "Unknown",
+    text:
+      playInfo.title ||
+      playInfo.content1 ||
+      "",
+    media: uniqueUrls.map((videoUrl, index) => ({
+      type: "video",
+      url: videoUrl,
+      quality: `Available stream ${index + 1}`
+    }))
+  };
+}
+
+async function parseStatusPost(url) {
   const match = url.pathname.match(
     /^\/(?:status|detail)\/(\d{10,20})\/?$/
   );
@@ -101,23 +178,25 @@ export async function parseWeibo(postUrl) {
 
   if (!id || !/^\d{10,20}$/.test(id)) {
     throw new Error(
-      "This Weibo link format is not supported yet. Please use a direct numeric status link."
+      "Unsupported Weibo post link format."
     );
   }
 
-  const apiUrl = `${API_BASE}?id=${encodeURIComponent(id)}`;
+  const apiUrl =
+    `https://m.weibo.cn/statuses/show?id=${encodeURIComponent(id)}`;
 
   const response = await fetch(apiUrl, {
     headers: {
-      "User-Agent": "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36",
-      "Referer": "https://m.weibo.cn/"
+      "User-Agent": "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36",
+      "Referer": "https://m.weibo.cn/",
+      "Accept": "application/json"
     },
     redirect: "error"
   });
 
   if (!response.ok) {
     throw new Error(
-      `Weibo returned an error (${response.status}).`
+      `Weibo returned HTTP ${response.status}.`
     );
   }
 
@@ -126,7 +205,7 @@ export async function parseWeibo(postUrl) {
 
   if (!post || typeof post !== "object") {
     throw new Error(
-      "Weibo did not return an accessible public post. It may be private, deleted, or require login."
+      "This post is unavailable or requires login."
     );
   }
 
@@ -134,7 +213,7 @@ export async function parseWeibo(postUrl) {
 
   if (!media.length) {
     throw new Error(
-      "No downloadable photos or videos were found in this post."
+      "No downloadable media was found in this post."
     );
   }
 
@@ -147,4 +226,24 @@ export async function parseWeibo(postUrl) {
     createdAt: post.created_at || null,
     media
   };
+}
+
+export async function parseWeibo(postUrl) {
+  const url = new URL(postUrl);
+
+  if (url.hostname === "video.weibo.com") {
+    return parseVideoComponent(url);
+  }
+
+  if (
+    url.hostname === "weibo.com" ||
+    url.hostname === "www.weibo.com" ||
+    url.hostname === "m.weibo.cn" ||
+    url.hostname === "weibo.cn" ||
+    url.hostname === "www.weibo.cn"
+  ) {
+    return parseStatusPost(url);
+  }
+
+  throw new Error("Unsupported Weibo domain.");
 }
