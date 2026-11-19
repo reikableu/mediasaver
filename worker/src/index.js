@@ -1,4 +1,6 @@
 
+import { parseWeibo } from "./platforms/weibo.js";
+
 const ALLOWED_WEIBO_HOSTS = new Set([
   "weibo.com",
   "www.weibo.com",
@@ -19,6 +21,7 @@ function json(data, status = 200, headers = {}) {
 
 function getCorsHeaders(request, env) {
   const origin = request.headers.get("Origin");
+
   const allowed = (env.ALLOWED_ORIGINS || "")
     .split(",")
     .map(value => value.trim())
@@ -55,28 +58,44 @@ export default {
 
     const url = new URL(request.url);
 
-    if (url.pathname === "/api/health" && request.method === "GET") {
+    if (
+      url.pathname === "/api/health" &&
+      request.method === "GET"
+    ) {
       return json({
         success: true,
         name: "MediaSaver API",
-        version: "0.1.0",
+        version: "0.2.0",
         status: "operational",
         platforms: ["weibo"],
-        extraction: "not yet implemented"
+        extraction: "connected"
       }, 200, cors || {});
     }
 
-    if (url.pathname === "/api/parse" && request.method === "POST") {
+    if (
+      url.pathname === "/api/parse" &&
+      request.method === "POST"
+    ) {
       let body;
 
       try {
         body = await request.json();
       } catch {
-        return json({ error: "Invalid JSON request." }, 400, cors || {});
+        return json({
+          success: false,
+          error: "Invalid JSON request."
+        }, 400, cors || {});
       }
 
-      if (!body || typeof body.url !== "string") {
-        return json({ error: "Please provide a post URL." }, 400, cors || {});
+      if (
+        !body ||
+        typeof body.url !== "string" ||
+        !body.url.trim()
+      ) {
+        return json({
+          success: false,
+          error: "Please provide a post URL."
+        }, 400, cors || {});
       }
 
       let postUrl;
@@ -84,7 +103,10 @@ export default {
       try {
         postUrl = new URL(body.url.trim());
       } catch {
-        return json({ error: "Invalid URL." }, 400, cors || {});
+        return json({
+          success: false,
+          error: "Invalid URL."
+        }, 400, cors || {});
       }
 
       if (
@@ -94,17 +116,28 @@ export default {
         postUrl.password
       ) {
         return json({
+          success: false,
           error: "This is not a supported public Weibo URL."
         }, 400, cors || {});
       }
 
-      return json({
-        success: false,
-        platform: "Weibo",
-        message: "Weibo extraction module is not connected yet."
-      }, 501, cors || {});
+      try {
+        const result = await parseWeibo(postUrl.href);
+
+        return json(result, 200, cors || {});
+      } catch (error) {
+        return json({
+          success: false,
+          platform: "Weibo",
+          error: error.message ||
+            "Unable to process this Weibo post."
+        }, 422, cors || {});
+      }
     }
 
-    return json({ error: "Endpoint not found." }, 404, cors || {});
+    return json({
+      success: false,
+      error: "Endpoint not found."
+    }, 404, cors || {});
   }
 };
