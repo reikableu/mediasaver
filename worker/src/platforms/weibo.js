@@ -12,7 +12,9 @@ function jsonSafeUrl(value) {
   try {
     const url = new URL(value);
 
-    if (!["https:", "http:"].includes(url.protocol)) return null;
+    if (url.protocol !== "https:" && url.protocol !== "http:") {
+      return null;
+    }
 
     const allowed = ALLOWED_MEDIA_HOSTS.some(host =>
       url.hostname === host || url.hostname.endsWith("." + host)
@@ -20,7 +22,6 @@ function jsonSafeUrl(value) {
 
     if (!allowed) return null;
 
-    // Upgrade approved media hosts to HTTPS.
     url.protocol = "https:";
     return url.href;
   } catch {
@@ -85,6 +86,14 @@ function extractMedia(post) {
   return media;
 }
 
+function checkRedirect(response) {
+  if (response.status >= 300 && response.status < 400) {
+    throw new Error(
+      "Weibo redirected the API request. The destination was not followed for security."
+    );
+  }
+}
+
 async function parseVideoComponent(url) {
   const fid = url.searchParams.get("fid");
 
@@ -113,8 +122,10 @@ async function parseVideoComponent(url) {
       "Accept": "application/json, text/plain, */*"
     },
     body: payload.toString(),
-    redirect: "error"
+    redirect: "manual"
   });
+
+  checkRedirect(response);
 
   if (!response.ok) {
     throw new Error(
@@ -191,8 +202,10 @@ async function parseStatusPost(url) {
       "Referer": "https://m.weibo.cn/",
       "Accept": "application/json"
     },
-    redirect: "error"
+    redirect: "manual"
   });
+
+  checkRedirect(response);
 
   if (!response.ok) {
     throw new Error(
