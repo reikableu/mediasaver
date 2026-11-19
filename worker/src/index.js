@@ -6,7 +6,8 @@ const ALLOWED_WEIBO_HOSTS = new Set([
   "www.weibo.com",
   "m.weibo.cn",
   "weibo.cn",
-  "www.weibo.cn"
+  "www.weibo.cn",
+  "video.weibo.com"
 ]);
 
 function json(data, status = 200, headers = {}) {
@@ -29,9 +30,7 @@ function getCorsHeaders(request, env) {
 
   if (!origin) return {};
 
-  if (!allowed.includes(origin)) {
-    return null;
-  }
+  if (!allowed.includes(origin)) return null;
 
   return {
     "Access-Control-Allow-Origin": origin,
@@ -65,10 +64,14 @@ export default {
       return json({
         success: true,
         name: "MediaSaver API",
-        version: "0.2.0",
+        version: "0.3.0",
         status: "operational",
         platforms: ["weibo"],
-        extraction: "connected"
+        extraction: "connected",
+        supportedFormats: [
+          "Weibo status links",
+          "Weibo video component links"
+        ]
       }, 200, cors || {});
     }
 
@@ -111,7 +114,9 @@ export default {
 
       if (
         postUrl.protocol !== "https:" ||
-        !ALLOWED_WEIBO_HOSTS.has(postUrl.hostname.toLowerCase()) ||
+        !ALLOWED_WEIBO_HOSTS.has(
+          postUrl.hostname.toLowerCase()
+        ) ||
         postUrl.username ||
         postUrl.password
       ) {
@@ -123,7 +128,6 @@ export default {
 
       try {
         const result = await parseWeibo(postUrl.href);
-
         return json(result, 200, cors || {});
       } catch (error) {
         return json({
