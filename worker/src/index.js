@@ -1,5 +1,6 @@
 
 import { parseWeibo } from "./platforms/weibo.js";
+import { normalizeMediaResponse } from "./core/media-normalizer.js";
 
 const ALLOWED_WEIBO_HOSTS = new Set([
   "weibo.com",
@@ -15,6 +16,7 @@ function json(data, status = 200, headers = {}) {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
       ...headers
     }
   });
@@ -45,7 +47,7 @@ export default {
     const cors = getCorsHeaders(request, env);
 
     if (cors === null) {
-      return json({ error: "Origin not allowed." }, 403);
+      return json({ success: false, error: "Origin not allowed." }, 403);
     }
 
     if (request.method === "OPTIONS") {
@@ -64,13 +66,16 @@ export default {
       return json({
         success: true,
         name: "MediaSaver API",
-        version: "0.3.0",
+        version: "0.4.0",
         status: "operational",
         platforms: ["weibo"],
         extraction: "connected",
-        supportedFormats: [
-          "Weibo status links",
-          "Weibo video component links"
+        normalization: "connected",
+        plannedPlatforms: [
+          "douyin",
+          "tiktok",
+          "rednote",
+          "bilibili"
         ]
       }, 200, cors || {});
     }
@@ -79,6 +84,17 @@ export default {
       url.pathname === "/api/parse" &&
       request.method === "POST"
     ) {
+      const contentLength = Number(
+        request.headers.get("Content-Length") || 0
+      );
+
+      if (contentLength > 10000) {
+        return json({
+          success: false,
+          error: "Request body is too large."
+        }, 413, cors || {});
+      }
+
       let body;
 
       try {
@@ -127,8 +143,21 @@ export default {
       }
 
       try {
-        const result = await parseWeibo(postUrl.href);
-        return json(result, 200, cors || {});
+        const extracted = await parseWeibo(postUrl.href);
+
+        const normalized =
+          normalizeMediaResponse(extracted);
+
+        if (!normalized.success || !normalized.media.length) {
+          return json({
+            success: false,
+            platform: "Weibo",
+            error: "No supported downloadable media was found."
+          }, 422, cors || {});
+        }
+
+        return json(normalized, 200, cors || {});
+
       } catch (error) {
         return json({
           success: false,
