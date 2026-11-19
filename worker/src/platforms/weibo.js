@@ -87,18 +87,17 @@ function extractMedia(post) {
 function checkRedirect(response) {
   if (response.status >= 300 && response.status < 400) {
     const location = response.headers.get("Location");
-
     let destination = "unknown";
 
     try {
       const target = new URL(location);
       destination = target.hostname + target.pathname;
     } catch {
-      // Do not expose query parameters.
+      // Do not expose redirect query parameters.
     }
 
     throw new Error(
-      `Weibo redirected the request (HTTP ${response.status}) to: ${destination}`
+      `Weibo redirected the request (HTTP ${response.status}) to: ${destination}. The post API may require a visitor session.`
     );
   }
 }
@@ -160,9 +159,7 @@ async function parseVideoComponent(url) {
   const uniqueUrls = [...new Set(candidates)];
 
   if (!uniqueUrls.length) {
-    throw new Error(
-      "No accessible video streams were returned by Weibo."
-    );
+    throw new Error("No accessible video streams were returned.");
   }
 
   return {
@@ -179,15 +176,40 @@ async function parseVideoComponent(url) {
   };
 }
 
-async function parseStatusPost(url) {
-  const match = url.pathname.match(
+function extractStatusId(url) {
+  // Mobile status format:
+  // /status/1234567890123456
+  // /detail/1234567890123456
+  const mobileMatch = url.pathname.match(
     /^\/(?:status|detail)\/(\d{10,20})\/?$/
   );
 
-  const id = match?.[1] || url.searchParams.get("layerid");
+  if (mobileMatch) return mobileMatch[1];
 
-  if (!id || !/^\d{10,20}$/.test(id)) {
-    throw new Error("Unsupported Weibo post link format.");
+  // Desktop format:
+  // /3869157516/5367069082391667
+  const desktopMatch = url.pathname.match(
+    /^\/\d{5,15}\/(\d{10,20})\/?$/
+  );
+
+  if (desktopMatch) return desktopMatch[1];
+
+  const layerId = url.searchParams.get("layerid");
+
+  if (layerId && /^\d{10,20}$/.test(layerId)) {
+    return layerId;
+  }
+
+  return null;
+}
+
+async function parseStatusPost(url) {
+  const id = extractStatusId(url);
+
+  if (!id) {
+    throw new Error(
+      "Unsupported Weibo post link. Use a direct desktop or mobile status URL."
+    );
   }
 
   const apiUrl =
@@ -212,7 +234,9 @@ async function parseStatusPost(url) {
   const post = result?.data;
 
   if (!post || typeof post !== "object") {
-    throw new Error("This post is unavailable or requires login.");
+    throw new Error(
+      "This post is unavailable or requires login."
+    );
   }
 
   const media = extractMedia(post);
