@@ -1,6 +1,10 @@
 
 import { parseWeibo } from "./platforms/weibo.js";
 import { normalizeMediaResponse } from "./core/media-normalizer.js";
+import {
+  createDownloadPlan,
+  getDownloadSummary
+} from "./core/download-manager.js";
 
 const ALLOWED_WEIBO_HOSTS = new Set([
   "weibo.com",
@@ -31,7 +35,6 @@ function getCorsHeaders(request, env) {
     .filter(Boolean);
 
   if (!origin) return {};
-
   if (!allowed.includes(origin)) return null;
 
   return {
@@ -47,7 +50,10 @@ export default {
     const cors = getCorsHeaders(request, env);
 
     if (cors === null) {
-      return json({ success: false, error: "Origin not allowed." }, 403);
+      return json({
+        success: false,
+        error: "Origin not allowed."
+      }, 403);
     }
 
     if (request.method === "OPTIONS") {
@@ -66,11 +72,12 @@ export default {
       return json({
         success: true,
         name: "MediaSaver API",
-        version: "0.4.0",
+        version: "0.5.0",
         status: "operational",
         platforms: ["weibo"],
         extraction: "connected",
         normalization: "connected",
+        downloadManager: "connected",
         plannedPlatforms: [
           "douyin",
           "tiktok",
@@ -156,7 +163,17 @@ export default {
           }, 422, cors || {});
         }
 
-        return json(normalized, 200, cors || {});
+        const downloadPlan =
+          createDownloadPlan(normalized);
+
+        const downloadSummary =
+          getDownloadSummary(downloadPlan);
+
+        return json({
+          ...normalized,
+          downloadPlan,
+          downloadSummary
+        }, 200, cors || {});
 
       } catch (error) {
         return json({
