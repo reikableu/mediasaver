@@ -12,9 +12,7 @@ function jsonSafeUrl(value) {
   try {
     const url = new URL(value);
 
-    if (url.protocol !== "https:" && url.protocol !== "http:") {
-      return null;
-    }
+    if (!["https:", "http:"].includes(url.protocol)) return null;
 
     const allowed = ALLOWED_MEDIA_HOSTS.some(host =>
       url.hostname === host || url.hostname.endsWith("." + host)
@@ -88,8 +86,19 @@ function extractMedia(post) {
 
 function checkRedirect(response) {
   if (response.status >= 300 && response.status < 400) {
+    const location = response.headers.get("Location");
+
+    let destination = "unknown";
+
+    try {
+      const target = new URL(location);
+      destination = target.hostname + target.pathname;
+    } catch {
+      // Do not expose query parameters.
+    }
+
     throw new Error(
-      "Weibo redirected the API request. The destination was not followed for security."
+      `Weibo redirected the request (HTTP ${response.status}) to: ${destination}`
     );
   }
 }
@@ -134,9 +143,7 @@ async function parseVideoComponent(url) {
   }
 
   const result = await response.json();
-
-  const playInfo =
-    result?.data?.Component_Play_Playinfo;
+  const playInfo = result?.data?.Component_Play_Playinfo;
 
   if (!playInfo) {
     throw new Error(
@@ -162,14 +169,8 @@ async function parseVideoComponent(url) {
     success: true,
     platform: "Weibo",
     id: fid,
-    author:
-      playInfo.author ||
-      playInfo.author_name ||
-      "Unknown",
-    text:
-      playInfo.title ||
-      playInfo.content1 ||
-      "",
+    author: playInfo.author || playInfo.author_name || "Unknown",
+    text: playInfo.title || playInfo.content1 || "",
     media: uniqueUrls.map((videoUrl, index) => ({
       type: "video",
       url: videoUrl,
@@ -183,14 +184,10 @@ async function parseStatusPost(url) {
     /^\/(?:status|detail)\/(\d{10,20})\/?$/
   );
 
-  const id =
-    match?.[1] ||
-    url.searchParams.get("layerid");
+  const id = match?.[1] || url.searchParams.get("layerid");
 
   if (!id || !/^\d{10,20}$/.test(id)) {
-    throw new Error(
-      "Unsupported Weibo post link format."
-    );
+    throw new Error("Unsupported Weibo post link format.");
   }
 
   const apiUrl =
@@ -208,26 +205,20 @@ async function parseStatusPost(url) {
   checkRedirect(response);
 
   if (!response.ok) {
-    throw new Error(
-      `Weibo returned HTTP ${response.status}.`
-    );
+    throw new Error(`Weibo returned HTTP ${response.status}.`);
   }
 
   const result = await response.json();
   const post = result?.data;
 
   if (!post || typeof post !== "object") {
-    throw new Error(
-      "This post is unavailable or requires login."
-    );
+    throw new Error("This post is unavailable or requires login.");
   }
 
   const media = extractMedia(post);
 
   if (!media.length) {
-    throw new Error(
-      "No downloadable media was found in this post."
-    );
+    throw new Error("No downloadable media was found in this post.");
   }
 
   return {
