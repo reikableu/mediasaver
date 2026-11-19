@@ -1,1 +1,1 @@
-
+export function extractWeibo() 
