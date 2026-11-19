@@ -1,26 +1,632 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#10131b"><meta name="description" content="A free, open-source public media link resolver.">
-<title>OpenMedia — Media downloader</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b0e14">
+<title>MediaSaver — Save what you came to keep</title>
+
 <style>
-:root{color-scheme:dark;--bg:#0c0f16;--panel:#151a25;--panel2:#1b2230;--line:#293244;--muted:#9ba7bb;--text:#f4f6fb;--accent:#9be15d;--accent2:#5bc0be;--danger:#ff7b86}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#263344 0,transparent 55%),var(--bg);color:var(--text);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}a{color:inherit}.wrap{width:min(980px,calc(100% - 36px));margin:auto}.top{height:76px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #ffffff12}.brand{display:flex;gap:11px;align-items:center;font-weight:750;font-size:19px;letter-spacing:-.5px}.mark{width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#10151a;font-weight:900}.pill{border:1px solid var(--line);border-radius:99px;padding:6px 11px;color:var(--muted);font-size:12px}.hero{text-align:center;padding:76px 0 36px}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:750}.hero h1{font-size:clamp(34px,6vw,58px);line-height:1.06;letter-spacing:-2px;margin:15px 0}.hero p{max-width:580px;margin:0 auto;color:var(--muted);font-size:16px}.panel{max-width:760px;margin:0 auto;background:linear-gradient(180deg,#1a2130,#131925);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 24px 80px #0005}.platforms{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}.platform{border:1px solid var(--line);background:#111722;color:var(--muted);border-radius:12px;padding:9px 13px;cursor:pointer;font:inherit;font-size:13px}.platform[aria-pressed=true]{color:var(--text);border-color:#9be15d88;background:#9be15d12}.inputrow{display:flex;gap:10px}.url{min-width:0;flex:1;background:#0c111a;border:1px solid #354158;color:var(--text);border-radius:13px;padding:15px;font:inherit;outline:none}.url:focus{border-color:var(--accent)}button{font:inherit}.primary{border:0;border-radius:13px;background:var(--accent);color:#15200e;font-weight:800;padding:0 21px;cursor:pointer}.primary:disabled{opacity:.45;cursor:not-allowed}.hint{color:var(--muted);font-size:12px;margin:12px 2px 0}.status{display:none;margin-top:16px;border:1px solid var(--line);border-radius:13px;padding:13px;color:var(--muted);white-space:pre-wrap}.status.show{display:block}.status.error{color:var(--danger);border-color:#ff7b8644}.features{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin:38px 0 70px}.feature{background:#151a25aa;border:1px solid var(--line);border-radius:16px;padding:17px}.feature b{display:block;margin:7px 0 3px}.feature p{margin:0;color:var(--muted);font-size:13px}.ico{font-size:20px}.foot{border-top:1px solid #ffffff12;padding:22px 0 34px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.result{margin-top:18px;display:none}.result.show{display:block}.result h2{font-size:16px}.mediaitem{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:8px}.mediaitem small{display:block;color:var(--muted)}.mediaitem a{color:var(--accent);font-weight:700;text-decoration:none;white-space:nowrap}@media(max-width:620px){.hero{padding-top:54px}.panel{padding:15px}.inputrow{flex-direction:column}.primary{padding:14px}.features{grid-template-columns:1fr}.top{height:64px}}
+:root {
+  --green: #abce53;
+  --green-dark: #8eb43a;
+  --bg: #0b0e14;
+  --panel: #151c29;
+  --panel2: #101620;
+  --border: #293548;
+  --muted: #94a1b5;
+  --white: #f2f4fa;
+  --danger: #ff7777;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(ellipse at 50% 0%, #192438 0%, transparent 55%),
+    var(--bg);
+  color: var(--white);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  min-height: 100vh;
+}
+
+button, input { font: inherit; }
+
+.container {
+  width: min(1120px, calc(100% - 36px));
+  margin: auto;
+}
+
+header {
+  height: 76px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 21px;
+  font-weight: 750;
+  letter-spacing: -.6px;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--green), #57b8a5);
+  color: #10160b;
+  font-weight: 900;
+  font-size: 21px;
+}
+
+.header-note {
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 30px;
+  padding: 9px 15px;
+  font-size: 12px;
+}
+
+.hero {
+  text-align: center;
+  padding: 94px 0 42px;
+}
+
+.eyebrow {
+  color: var(--green);
+  letter-spacing: 3px;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+h1 {
+  font-size: clamp(42px, 7vw, 68px);
+  line-height: 1.02;
+  letter-spacing: -3px;
+  max-width: 760px;
+  margin: 24px auto 20px;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.6;
+  max-width: 650px;
+  margin: auto;
+}
+
+.main-card {
+  background: linear-gradient(145deg, #192233, #111722);
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  padding: 28px;
+  margin: 0 auto 48px;
+  box-shadow: 0 24px 70px rgba(0,0,0,.2);
+}
+
+.tabs {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.tab {
+  padding: 12px 17px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  background: #101620;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.tab.active {
+  border-color: var(--green-dark);
+  color: var(--green);
+  background: rgba(171,206,83,.09);
+}
+
+.input-row {
+  display: flex;
+  gap: 12px;
+}
+
+.url-input {
+  flex: 1;
+  min-width: 0;
+  height: 68px;
+  padding: 0 19px;
+  color: white;
+  background: #0c111a;
+  border: 1px solid #34445d;
+  border-radius: 17px;
+  outline: none;
+  font-size: 16px;
+}
+
+.url-input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(171,206,83,.1);
+}
+
+.url-input::placeholder { color: #8591a4; }
+
+.primary {
+  background: var(--green);
+  color: #14200a;
+  border: 0;
+  border-radius: 16px;
+  padding: 0 27px;
+  min-height: 58px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.primary:hover { background: #bce16a; }
+.primary:disabled { opacity: .5; cursor: wait; }
+
+.hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 17px 3px 0;
+  line-height: 1.6;
+}
+
+.status {
+  display: none;
+  margin-top: 22px;
+  padding: 15px 17px;
+  border-radius: 13px;
+  border: 1px solid var(--border);
+  background: #0c111a;
+  color: var(--muted);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.status.show { display: block; }
+.status.error { color: #ffaaaa; border-color: #743e4a; }
+.status.success { color: #c5e98a; border-color: #526d36; }
+
+.results {
+  display: none;
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+  padding-top: 23px;
+}
+
+.results.show { display: block; }
+
+.results h2 {
+  font-size: 18px;
+  margin: 0 0 7px;
+}
+
+.author {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.media-item {
+  background: #0c111a;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  padding: 12px;
+  min-width: 0;
+}
+
+.media-item img,
+.media-item video {
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  border-radius: 9px;
+  background: #080b10;
+}
+
+.media-type {
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 750;
+  margin: 10px 0;
+}
+
+.download {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  background: #273347;
+  color: white;
+  padding: 11px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.download:hover { background: #35445b; }
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 90px;
+}
+
+.feature {
+  border: 1px solid var(--border);
+  background: rgba(21,28,41,.75);
+  border-radius: 19px;
+  padding: 23px;
+}
+
+.feature-icon {
+  color: var(--green);
+  font-size: 23px;
+  margin-bottom: 16px;
+}
+
+.feature h3 {
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+
+.feature p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+footer {
+  border-top: 1px solid rgba(255,255,255,.08);
+  padding: 25px 0 35px;
+  color: var(--muted);
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+@media(max-width:650px) {
+  .hero { padding: 65px 0 32px; }
+  h1 { letter-spacing: -2px; }
+  .main-card { padding: 19px; border-radius: 20px; }
+  .input-row { flex-direction: column; }
+  .primary { min-height: 56px; }
+  .features { grid-template-columns: 1fr; }
+  footer { flex-direction: column; }
+  .header-note { font-size: 10px; }
+}
 </style>
 </head>
-<body><div class="wrap">
-<header class="top"><div class="brand"><span class="mark">O</span> OpenMedia</div><span class="pill">Free · Open source · No account</span></header>
-<main><section class="hero"><div class="eyebrow">One link. Your media.</div><h1>Save what you<br>came to keep.</h1><p>A clean, free media link resolver. We’re starting with Weibo, then expanding to more platforms.</p></section>
-<section class="panel" aria-label="Media link resolver"><div class="platforms" role="group" aria-label="Supported platform"><button class="platform" data-platform="weibo" aria-pressed="true">Weibo</button><button class="platform" data-platform="douyin" aria-pressed="false">Douyin</button><button class="platform" data-platform="tiktok" aria-pressed="false">TikTok</button><button class="platform" data-platform="rednote" aria-pressed="false">RedNote</button><button class="platform" data-platform="bilibili" aria-pressed="false">Bilibili</button></div>
-<form id="resolve-form"><div class="inputrow"><input class="url" id="post-url" type="url" placeholder="Paste a public post link here…" autocomplete="off" required><button class="primary" id="resolve-btn" type="submit">Analyze link</button></div></form><p class="hint">Public posts only. Only download content you have permission to save.</p><div id="status" class="status" role="status" aria-live="polite"></div><section id="result" class="result"><h2>Available media</h2><div id="media-list"></div></section></section>
-<section class="features"><article class="feature"><span class="ico">✦</span><b>Original where available</b><p>Show source quality options returned by the platform.</p></article><article class="feature"><span class="ico">▧</span><b>Photos and motion</b><p>Designed for image sets, GIFs and Live Photo assets.</p></article><article class="feature"><span class="ico">⇩</span><b>Choose what to save</b><p>Preview the available items before downloading.</p></article></section></main>
-<footer class="foot"><span>OpenMedia · Community-built project</span><span>Respect creators and platform rules.</span></footer></div>
+
+<body>
+<header class="container">
+  <div class="brand">
+    <div class="logo">M</div>
+    MediaSaver
+  </div>
+  <div class="header-note">Free · Open source · No account</div>
+</header>
+
+<main class="container">
+  <section class="hero">
+    <div class="eyebrow">One link. Your media.</div>
+    <h1>Save what you<br>came to keep.</h1>
+    <p class="subtitle">
+      A clean, free media link resolver. Starting with Weibo,
+      with more platforms planned.
+    </p>
+  </section>
+
+  <section class="main-card">
+    <div class="tabs" id="platformTabs">
+      <button class="tab active" data-platform="weibo">Weibo</button>
+      <button class="tab" data-platform="douyin">Douyin</button>
+      <button class="tab" data-platform="tiktok">TikTok</button>
+      <button class="tab" data-platform="rednote">RedNote</button>
+      <button class="tab" data-platform="bilibili">Bilibili</button>
+    </div>
+
+    <form id="mediaForm">
+      <div class="input-row">
+        <input
+          class="url-input"
+          id="mediaUrl"
+          type="url"
+          placeholder="Paste a public post or direct media link..."
+          autocomplete="url"
+          required
+        >
+        <button class="primary" id="analyzeButton" type="submit">
+          Analyze link
+        </button>
+      </div>
+    </form>
+
+    <p class="hint" id="inputHint">
+      Public posts only. Only download content you have permission to save.
+      Direct media links may work when the source permits browser access.
+    </p>
+
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+
+    <section class="results" id="results">
+      <h2 id="resultTitle">Available media</h2>
+      <div class="author" id="resultAuthor"></div>
+      <div class="media-grid" id="mediaGrid"></div>
+    </section>
+  </section>
+
+  <section class="features">
+    <article class="feature">
+      <div class="feature-icon">✦</div>
+      <h3>Original where available</h3>
+      <p>Show source quality options returned by the platform.</p>
+    </article>
+    <article class="feature">
+      <div class="feature-icon">▧</div>
+      <h3>Photos and motion</h3>
+      <p>Designed for image sets, GIFs and Live Photo assets.</p>
+    </article>
+    <article class="feature">
+      <div class="feature-icon">↓</div>
+      <h3>Choose what to save</h3>
+      <p>Preview available items before downloading.</p>
+    </article>
+  </section>
+</main>
+
+<footer class="container">
+  <span>MediaSaver · Community-built project</span>
+  <span>Respect creators and platform rules.</span>
+</footer>
+
 <script>
-// Set this to the deployed Cloudflare Worker URL after deployment.
-const API_BASE = 'https://YOUR-WORKER.your-subdomain.workers.dev';
-let selectedPlatform='weibo';
-const statusBox=document.querySelector('#status'), resultBox=document.querySelector('#result'), mediaList=document.querySelector('#media-list'), submitBtn=document.querySelector('#resolve-btn');
-document.querySelectorAll('.platform').forEach(button=>button.addEventListener('click',()=>{selectedPlatform=button.dataset.platform;document.querySelectorAll('.platform').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));}));
-function showStatus(message,error=false){statusBox.textContent=message;statusBox.className='status show'+(error?' error':'');}
-document.querySelector('#resolve-form').addEventListener('submit',async event=>{event.preventDefault();const url=document.querySelector('#post-url').value.trim();if(!url)return;submitBtn.disabled=true;submitBtn.textContent='Analyzing…';resultBox.classList.remove('show');mediaList.replaceChildren();showStatus('Checking the link and looking for available media…');try{const response=await fetch(`${API_BASE}/api/resolve`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,platform:selectedPlatform})});const data=await response.json();if(!response.ok)throw new Error(data.error||'Could not analyze this link.');showStatus(data.message||'Media found.');if(Array.isArray(data.media)&&data.media.length){for(const item of data.media){const row=document.createElement('div');row.className='mediaitem';const label=document.createElement('div');const name=document.createElement('b');name.textContent=item.label||item.type||'Media';const detail=document.createElement('small');detail.textContent=item.quality||item.type||'';label.append(name,detail);const link=document.createElement('a');link.href=item.url;link.target='_blank';link.rel='noopener noreferrer';link.download='';link.textContent='Open / save';row.append(label,link);mediaList.append(row);}resultBox.classList.add('show');}}catch(error){showStatus(error.message||'Something went wrong.',true);}finally{submitBtn.disabled=false;submitBtn.textContent='Analyze link';}});
-</script></body></html>
+const API_URL =
+  "https://mediasaver-api.rhize-lei.workers.dev/api/parse";
+
+let selectedPlatform = "weibo";
+
+const form = document.getElementById("mediaForm");
+const input = document.getElementById("mediaUrl");
+const button = document.getElementById("analyzeButton");
+const statusBox = document.getElementById("status");
+const results = document.getElementById("results");
+const mediaGrid = document.getElementById("mediaGrid");
+
+function showStatus(message, type = "") {
+  statusBox.textContent = message;
+  statusBox.className = "status show " + type;
+}
+
+function clearResults() {
+  results.classList.remove("show");
+  mediaGrid.replaceChildren();
+  document.getElementById("resultAuthor").textContent = "";
+}
+
+function validHttpUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function isDirectMediaUrl(url) {
+  return /\.(jpe?g|png|webp|gif|mp4|mov|m4v|webm)(?:$|[?#])/i.test(url);
+}
+
+function createMediaCard(item) {
+  const card = document.createElement("article");
+  card.className = "media-item";
+
+  const type = item.type || "media";
+  const mediaUrl = item.url || item.video || item.image;
+
+  if (item.image && item.video && type === "livephoto") {
+    const image = document.createElement("img");
+    image.src = item.image;
+    image.alt = "Live Photo preview";
+    image.loading = "lazy";
+    card.appendChild(image);
+  } else if (mediaUrl && type === "video") {
+    const video = document.createElement("video");
+    video.src = mediaUrl;
+    video.controls = true;
+    video.preload = "metadata";
+    if (item.thumbnail) video.poster = item.thumbnail;
+    card.appendChild(video);
+  } else if (mediaUrl && type === "image") {
+    const image = document.createElement("img");
+    image.src = mediaUrl;
+    image.alt = "Media preview";
+    image.loading = "lazy";
+    card.appendChild(image);
+  } else if (item.image) {
+    const image = document.createElement("img");
+    image.src = item.image;
+    image.alt = "Media preview";
+    image.loading = "lazy";
+    card.appendChild(image);
+  }
+
+  const label = document.createElement("div");
+  label.className = "media-type";
+  label.textContent = type.toUpperCase();
+  card.appendChild(label);
+
+  if (mediaUrl && validHttpUrl(mediaUrl)) {
+    const link = document.createElement("a");
+    link.className = "download";
+    link.href = mediaUrl;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "Open media";
+    card.appendChild(link);
+  }
+
+  return card;
+}
+
+function showMedia(data) {
+  mediaGrid.replaceChildren();
+
+  const media = Array.isArray(data.media) ? data.media : [];
+
+  if (!media.length) {
+    showStatus("No downloadable media was returned.", "error");
+    return;
+  }
+
+  document.getElementById("resultTitle").textContent =
+    "Available media (" + media.length + ")";
+
+  document.getElementById("resultAuthor").textContent =
+    data.author ? "Posted by " + data.author : "";
+
+  for (const item of media) {
+    if (item.url && !validHttpUrl(item.url)) continue;
+    if (item.video && !validHttpUrl(item.video)) continue;
+    if (item.image && !validHttpUrl(item.image)) continue;
+    mediaGrid.appendChild(createMediaCard(item));
+  }
+
+  if (!mediaGrid.children.length) {
+    showStatus("No usable media URLs were returned.", "error");
+    return;
+  }
+
+  results.classList.add("show");
+  showStatus("Media information received. Choose an item to open.", "success");
+}
+
+function showDirectMedia(url) {
+  clearResults();
+
+  const type = /\.(mp4|mov|m4v|webm)(?:$|[?#])/i.test(url)
+    ? "video"
+    : "image";
+
+  const item = {
+    type,
+    url
+  };
+
+  showMedia({
+    author: "Direct media URL",
+    media: [item]
+  });
+}
+
+document.getElementById("platformTabs").addEventListener("click", event => {
+  const tab = event.target.closest("[data-platform]");
+  if (!tab) return;
+
+  selectedPlatform = tab.dataset.platform;
+
+  document.querySelectorAll(".tab").forEach(button => {
+    button.classList.toggle("active", button === tab);
+  });
+
+  if (selectedPlatform !== "weibo") {
+    showStatus(
+      selectedPlatform.charAt(0).toUpperCase() +
+      selectedPlatform.slice(1) +
+      " support is not connected yet. Direct media links can still be tested.",
+      ""
+    );
+  } else {
+    showStatus("Weibo post links and direct media links can be tested.", "");
+  }
+});
+
+form.addEventListener("submit", async event => {
+  event.preventDefault();
+
+  const value = input.value.trim();
+
+  clearResults();
+
+  if (!validHttpUrl(value)) {
+    showStatus("Please enter a valid HTTP or HTTPS link.", "error");
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Analyzing...";
+
+  try {
+    if (isDirectMediaUrl(value)) {
+      showDirectMedia(value);
+      return;
+    }
+
+    if (selectedPlatform !== "weibo") {
+      showStatus(
+        "This platform's post extraction is not connected yet. Try a direct media URL instead.",
+        "error"
+      );
+      return;
+    }
+
+    showStatus("Contacting MediaSaver API...");
+
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ url: value })
+    });
+
+    let data;
+
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error("The API returned an unreadable response.");
+    }
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.error || "The post could not be analyzed."
+      );
+    }
+
+    showMedia(data);
+
+  } catch (error) {
+    showStatus(
+      error.message ||
+      "Unable to analyze this link. The source may block browser access.",
+      "error"
+    );
+  } finally {
+    button.disabled = false;
+    button.textContent = "Analyze link";
+  }
+});
+</script>
+</body>
+</html>
