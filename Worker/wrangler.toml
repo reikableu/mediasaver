@@ -1,7 +1,0 @@
-name = "openmedia-api"
-main = "src/index.js"
-compatibility_date = "2026-11-19"
-
-[vars]
-# Replace with the exact public HTMLPUT origin after publishing the frontend.
-ALLOWED_ORIGINS = "https://YOUR-PUBLISHED-PAGE.htmlput.com"
