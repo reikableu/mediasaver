@@ -5,3 +5,7 @@ compatibility_date = "2026-11-19"
 
 [vars]
 ALLOWED_ORIGINS = "https://share.htmlput.com"
+
+[[kv_namespaces]]
+binding = "MEDIASAVER_SESSIONS"
+id = "22f7873a284f46fb8fa026bab05b2365"
