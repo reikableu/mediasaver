@@ -11,12 +11,6 @@ import {
   getDownloadSummary
 } from "./core/download-manager.js";
 
-import {
-  createSession,
-  getSession,
-  deleteSession
-} from "./core/session-manager.js";
-
 const WEIBO_HOSTS = new Set([
   "weibo.com",
   "www.weibo.com",
@@ -100,7 +94,7 @@ export default {
       return json({
         success: true,
         name: "MediaSaver API",
-        version: "0.7.0",
+        version: "0.8.0",
         status: "operational",
         platforms: ["weibo", "tiktok"],
         extraction: "connected",
@@ -115,57 +109,6 @@ export default {
           "x"
         ]
       }, 200, cors || {});
-    }
-
-    if (
-      url.pathname === "/api/session-check" &&
-      request.method === "POST"
-    ) {
-      let sessionId = null;
-
-      try {
-        const created = await createSession(env);
-        sessionId = created.id;
-
-        const retrieved = await getSession(
-          env,
-          sessionId
-        );
-
-        if (!retrieved || retrieved.id !== sessionId) {
-          throw new Error(
-            "Session could not be retrieved from KV."
-          );
-        }
-
-        await deleteSession(env, sessionId);
-        sessionId = null;
-
-        return json({
-          success: true,
-          sessionStorage: "operational",
-          sessionCreated: true,
-          sessionRetrieved: true,
-          sessionDeleted: true,
-          expirationSeconds: 900
-        }, 200, cors || {});
-
-      } catch (error) {
-        if (sessionId) {
-          try {
-            await deleteSession(env, sessionId);
-          } catch {
-            // Best-effort cleanup.
-          }
-        }
-
-        return json({
-          success: false,
-          sessionStorage: "test failed",
-          error: error.message ||
-            "Unable to verify session storage."
-        }, 500, cors || {});
-      }
     }
 
     if (
