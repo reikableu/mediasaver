@@ -24,7 +24,6 @@ function safeMediaUrl(value) {
 
     const hostname = url.hostname.toLowerCase();
 
-    // Reject local and private network destinations.
     if (
       hostname === "localhost" ||
       hostname.endsWith(".localhost") ||
@@ -45,6 +44,32 @@ function safeMediaUrl(value) {
   }
 }
 
+function normalizeResponseCheck(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  return {
+    status: Number.isInteger(value.status)
+      ? value.status
+      : null,
+    contentType:
+      typeof value.contentType === "string"
+        ? value.contentType.slice(0, 120)
+        : null,
+    contentRange:
+      typeof value.contentRange === "string"
+        ? value.contentRange.slice(0, 200)
+        : null,
+    playableResponse:
+      value.playableResponse === true,
+    error:
+      typeof value.error === "string"
+        ? value.error.slice(0, 200)
+        : null
+  };
+}
+
 function normalizeMediaItem(item, index = 0) {
   if (!item || typeof item !== "object") {
     return null;
@@ -63,7 +88,10 @@ function normalizeMediaItem(item, index = 0) {
     thumbnail: null,
     filename: null,
     quality: item.quality || null,
-    duration: item.duration || null
+    duration: Number(item.duration) || null,
+    responseCheck: normalizeResponseCheck(
+      item.responseCheck
+    )
   };
 
   if (type === "livephoto") {
@@ -74,7 +102,9 @@ function normalizeMediaItem(item, index = 0) {
       return null;
     }
 
-    normalized.url = normalized.video || normalized.image;
+    normalized.url =
+      normalized.video || normalized.image;
+
     normalized.thumbnail = normalized.image;
   } else {
     normalized.url = safeMediaUrl(item.url);
